@@ -1,0 +1,10 @@
+[package]
+name = "ossify"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4.0", features = ["derive", "env"] }
+opendal = { version = "0.53.0", features = ["services-oss"] }
+tokio = { version = "1.44.2", features = ["full"] }
