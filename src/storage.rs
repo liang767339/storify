@@ -22,7 +22,7 @@ impl FromStr for StorageProvider {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "oss" => Ok(Self::Oss),
-            "s3" => Ok(Self::S3),
+            "s3" | "minio" => Ok(Self::S3),
             "fs" => Ok(Self::Fs),
             _ => Err(anyhow::anyhow!("Unsupported storage provider: {}", s)),
         }
