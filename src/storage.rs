@@ -1,5 +1,5 @@
 use crate::error::{
-    DirectoryDeletionNotRecursiveSnafu, DirectoryUploadNotRecursiveSnafu, Error,
+    DirectoryDeletionNotRecursiveSnafu, DirectoryUploadNotRecursiveSnafu, Error, InvalidPathSnafu,
     PartialDeletionSnafu, PathNotFoundSnafu, Result,
 };
 use async_recursion::async_recursion;
@@ -334,7 +334,7 @@ impl StorageClient {
             if file_size > 0 {
                 let progress = (total_bytes as f64 / file_size as f64 * 100.0) as u32;
                 if total_bytes.is_multiple_of(BUFFER_SIZE as u64 * 100) {
-                    print!("\r📤 Uploading {}: {progress}%", local_path.display());
+                    print!("\r Uploading {}: {progress}%", local_path.display());
                     use std::io::{self, Write};
                     let _ = io::stdout().flush();
                 }
@@ -400,8 +400,105 @@ impl StorageClient {
             Err(_) => Ok(false),
         }
     }
-}
 
+    pub async fn copy_files(&self, src_path: &str, dest_path: &str) -> Result<()> {
+        self.copy_files_impl(src_path, dest_path)
+            .await
+            .map_err(|e| Error::CopyFailed {
+                src_path: src_path.to_string(),
+                dest_path: dest_path.to_string(),
+                source: Box::new(e),
+            })
+    }
+
+    async fn copy_files_impl(&self, src_path: &str, dest_path: &str) -> Result<()> {
+        match self.operator.list_with(src_path).limit(1).await {
+            Ok(entries) if !entries.is_empty() => {
+                self.copy_file_recursive(src_path, dest_path).await?;
+                Ok(())
+            }
+            Ok(_) => {
+                ensure!(
+                    self.operator.exists(src_path).await?,
+                    InvalidPathSnafu {
+                        path: src_path.to_string(),
+                    }
+                );
+                Ok(())
+            }
+            Err(_) => Err(Error::InvalidPath {
+                path: src_path.to_string(),
+            }),
+        }
+    }
+
+    #[async_recursion]
+    async fn copy_file_recursive(&self, src_path: &str, dest_path: &str) -> Result<()> {
+        let entries = self.operator.list_with(src_path).recursive(true).await?;
+
+        for entry in &entries {
+            let meta: &opendal::Metadata = entry.metadata();
+            let local_file_path = entry.path();
+            let file_name = local_file_path
+                .strip_prefix(src_path)
+                .unwrap_or(local_file_path);
+            let new_dest_path = Path::new(dest_path)
+                .join(file_name)
+                .to_string_lossy()
+                .to_string();
+
+            if meta.mode() == EntryMode::DIR {
+                self.copy_file_recursive(local_file_path, &new_dest_path)
+                    .await?;
+            } else {
+                self.stream_copy(local_file_path, &new_dest_path).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn stream_copy(&self, src_path: &str, dest_path: &str) -> opendal::Result<()> {
+        const CHUNK_SIZE: usize = 1024 * 1024;
+
+        let metadata = self.operator.stat(src_path).await?;
+        let file_size = metadata.content_length();
+
+        let mut writer = self.operator.writer(dest_path).await?;
+        let mut total_bytes = 0u64;
+        let mut offset = 0u64;
+
+        loop {
+            let chunk_size = std::cmp::min(CHUNK_SIZE as u64, file_size - offset);
+
+            let data = self
+                .operator
+                .read_with(src_path)
+                .range(offset..offset + chunk_size)
+                .await?;
+            let data_len = data.len();
+            if data_len == 0 {
+                break;
+            }
+
+            writer.write(data).await?;
+            total_bytes += data_len as u64;
+            offset += chunk_size;
+
+            if total_bytes.is_multiple_of(CHUNK_SIZE as u64) {
+                let progress = (total_bytes as f64 / file_size as f64 * 100.0) as u32;
+                print!("\r Copying {src_path}: {progress}%");
+                use std::io::{self, Write};
+                let _ = io::stdout().flush();
+            }
+        }
+
+        writer.close().await?;
+        println!("\n✅ Copied: {src_path} → {dest_path} ({total_bytes} bytes)");
+
+        Ok(())
+    }
+}
 struct FileInfo {
     path: String,
     size: u64,

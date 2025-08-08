@@ -41,6 +41,13 @@ pub enum Error {
         source: Box<Error>,
     },
 
+    #[snafu(display("Failed to copy '{src_path}' to '{dest_path}': {source}"))]
+    CopyFailed {
+        src_path: String,
+        dest_path: String,
+        source: Box<Error>,
+    },
+
     #[snafu(display("Failed to list directory '{path}': {source}"))]
     ListDirectoryFailed { path: String, source: Box<Error> },
 

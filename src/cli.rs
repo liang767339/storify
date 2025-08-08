@@ -40,6 +40,8 @@ pub enum Commands {
     Put(PutArgs),
     /// Remove files/directories from remote storage (equivalent to hdfs dfs -rm)
     Rm(RmArgs),
+    /// Copy files/directories from remote to remote (equivalent to hdfs dfs -cp)
+    Cp(CpArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -109,6 +111,17 @@ pub struct RmArgs {
     pub force: bool,
 }
 
+#[derive(Parser, Debug)]
+pub struct CpArgs {
+    /// The remote path to copy from
+    #[arg(value_name = "SRC", value_parser = parse_validated_path)]
+    pub src_path: String,
+
+    /// The remote path to copy to
+    #[arg(value_name = "DEST", value_parser = parse_validated_path)]
+    pub dest_path: String,
+}
+
 pub async fn run(args: Args, client: StorageClient) -> Result<()> {
     match args.command {
         Commands::Ls(ls_args) => {
@@ -136,6 +149,11 @@ pub async fn run(args: Args, client: StorageClient) -> Result<()> {
             }
             client
                 .delete_files(&rm_args.paths, rm_args.recursive)
+                .await?;
+        }
+        Commands::Cp(cp_args) => {
+            client
+                .copy_files(&cp_args.src_path, &cp_args.dest_path)
                 .await?;
         }
     }
