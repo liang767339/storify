@@ -84,6 +84,7 @@ pub fn load_storage_config() -> Result<StorageConfig> {
         StorageProvider::Oss => load_cloud_config(ProviderKeys::for_oss(), StorageConfig::oss),
         StorageProvider::S3 => load_cloud_config(s3_like_keys(&provider_str), StorageConfig::s3),
         StorageProvider::Fs => load_fs_config(),
+        StorageProvider::Hdfs => load_hdfs_config(),
     }
 }
 
@@ -102,6 +103,15 @@ where
     let mut config = config_constructor(bucket, access_key_id, secret_key, region);
     config.endpoint = endpoint;
     Ok(config)
+}
+
+/// Load HDFS configuration
+fn load_hdfs_config() -> Result<StorageConfig> {
+    let name_node = env::var("HDFS_NAME_NODE").map_err(|_| Error::MissingEnvVar {
+        key: "HDFS_NAME_NODE".to_string(),
+    })?;
+    let root_path = env::var("HDFS_ROOT_PATH").unwrap_or_else(|_| "/".to_string());
+    Ok(StorageConfig::hdfs(name_node, root_path))
 }
 
 /// Load filesystem configuration (for testing)
