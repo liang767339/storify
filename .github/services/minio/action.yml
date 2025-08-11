@@ -1,0 +1,31 @@
+name: minio
+description: 'Behavior test for MinIO S3.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup MinIO Server
+      shell: bash
+      working-directory: .github/services/minio
+      run: docker compose up -d --wait
+      
+    - name: Setup test bucket
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: "minioadmin"
+        AWS_SECRET_ACCESS_KEY: "minioadmin"
+      run: |
+        sleep 10
+        aws --endpoint-url http://127.0.0.1:9000/ s3 mb s3://test
+
+    - name: Setup environment variables
+      shell: bash
+      run: |
+        {
+          echo "STORAGE_PROVIDER=minio";
+          echo "STORAGE_BUCKET=test";
+          echo "STORAGE_ENDPOINT=http://127.0.0.1:9000";
+          echo "STORAGE_ACCESS_KEY_ID=minioadmin";
+          echo "STORAGE_ACCESS_KEY_SECRET=minioadmin";
+          echo "STORAGE_REGION=us-east-1";
+        } >> "$GITHUB_ENV" 
