@@ -7,23 +7,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-          
+
       - name: Setup MinIO
         uses: ./.github/services/minio
-          
+
       - name: Run Behavior Tests
         run: cargo test --test behavior
         env:
           RUST_LOG: info
-          
+
       - name: Cleanup
         if: always()
         shell: bash
         working-directory: .github/services/minio
-        run: docker compose down 
+        run: docker compose down

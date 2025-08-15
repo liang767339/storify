@@ -8,7 +8,7 @@ runs:
       shell: bash
       working-directory: .github/services/minio
       run: docker compose up -d --wait
-      
+
     - name: Setup test bucket
       shell: bash
       env:
@@ -20,12 +20,4 @@ runs:
 
     - name: Setup environment variables
       shell: bash
-      run: |
-        {
-          echo "STORAGE_PROVIDER=minio";
-          echo "STORAGE_BUCKET=test";
-          echo "STORAGE_ENDPOINT=http://127.0.0.1:9000";
-          echo "STORAGE_ACCESS_KEY_ID=minioadmin";
-          echo "STORAGE_ACCESS_KEY_SECRET=minioadmin";
-          echo "STORAGE_REGION=us-east-1";
-        } >> "$GITHUB_ENV" 
+      run: "{\n  echo \"STORAGE_PROVIDER=minio\";\n  echo \"STORAGE_BUCKET=test\";\n  echo \"STORAGE_ENDPOINT=http://127.0.0.1:9000\";\n  echo \"STORAGE_ACCESS_KEY_ID=minioadmin\";\n  echo \"STORAGE_ACCESS_KEY_SECRET=minioadmin\";\n  echo \"STORAGE_REGION=us-east-1\";\n} >> \"$GITHUB_ENV\" \n"

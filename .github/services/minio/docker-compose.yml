@@ -18,4 +18,4 @@ services:
       retries: 3
 
 volumes:
-  minio_data: 
+  minio_data:
