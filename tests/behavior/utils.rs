@@ -1,10 +1,12 @@
+use assert_cmd::prelude::*;
 use libtest_mimic::{Failed, Trial};
 use opendal::Operator;
 use ossify::error::Result;
-use ossify::storage::StorageClient;
+use ossify::storage::{StorageClient, StorageConfig};
 use rand::Rng;
 use rand::prelude::*;
 use std::env;
+use std::process::Command;
 use std::sync::LazyLock;
 use uuid::Uuid;
 
@@ -119,6 +121,66 @@ impl Default for Fixture {
     }
 }
 
+/// A helper struct for managing End-to-End test environments.
+pub struct E2eTestEnv {
+    pub bucket: String,
+    pub endpoint: String,
+    pub access_key_id: String,
+    pub access_key_secret: String,
+    pub region: String,
+    pub verifier: StorageClient,
+}
+
+impl E2eTestEnv {
+    /// Creates a new E2E test environment, ensuring the bucket exists.
+    pub async fn new() -> Self {
+        let bucket = "test-bucket-e2e".to_string();
+        let endpoint = "http://127.0.0.1:9000".to_string();
+        let access_key_id = "minioadmin".to_string();
+        let access_key_secret = "minioadmin".to_string();
+        let region = "us-east-1".to_string();
+
+        let mut config = StorageConfig::s3(
+            bucket.clone(),
+            access_key_id.clone(),
+            access_key_secret.clone(),
+            Some(region.clone()),
+        );
+        config.endpoint = Some(endpoint.clone());
+        let verifier = StorageClient::new(config).await.unwrap();
+
+        // Ensure the bucket exists, ignoring 'already exists' errors.
+        match verifier.operator().create_dir("").await {
+            Ok(_) => (),
+            Err(e) if e.kind() == opendal::ErrorKind::Unexpected => (),
+            Err(e) => panic!("Failed to create E2E test bucket: {}", e),
+        }
+
+        Self {
+            bucket,
+            endpoint,
+            access_key_id,
+            access_key_secret,
+            region,
+            verifier,
+        }
+    }
+
+    /// Returns a Command pre-configured with all necessary environment variables.
+    pub fn command(&self) -> Command {
+        let mut cmd = Command::cargo_bin("ossify").unwrap();
+        cmd.env_clear()
+            .env("RUST_LOG", "info")
+            .env("STORAGE_PROVIDER", "minio")
+            .env("STORAGE_BUCKET", &self.bucket)
+            .env("STORAGE_ENDPOINT", &self.endpoint)
+            .env("STORAGE_ACCESS_KEY_ID", &self.access_key_id)
+            .env("STORAGE_ACCESS_KEY_SECRET", &self.access_key_secret)
+            .env("STORAGE_REGION", &self.region);
+        cmd
+    }
+}
+
 pub fn build_async_trial<F, Fut>(name: &str, client: &StorageClient, f: F) -> Trial
 where
     F: FnOnce(StorageClient) -> Fut + Send + 'static,
@@ -137,9 +199,7 @@ where
 #[macro_export]
 macro_rules! async_trials {
     ($client:ident, $($test:ident),*) => {
-        vec![$(
-            build_async_trial(stringify!($test), $client, $test),
-        )*]
+        vec![$(build_async_trial(stringify!($test), $client, $test),)*]
     };
 }
 
