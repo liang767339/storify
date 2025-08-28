@@ -44,6 +44,8 @@ pub enum Commands {
     Cp(CpArgs),
     /// Create directories in remote storage
     Mkdir(MkdirArgs),
+    /// Display file contents
+    Cat(CatArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -135,6 +137,13 @@ pub struct MkdirArgs {
     pub parents: bool,
 }
 
+#[derive(Parser, Debug)]
+pub struct CatArgs {
+    /// The remote file path to display
+    #[arg(value_name = "FILE", value_parser = parse_validated_path)]
+    pub file: String,
+}
+
 pub async fn run(args: Args, client: StorageClient) -> Result<()> {
     match args.command {
         Commands::Ls(ls_args) => {
@@ -173,6 +182,9 @@ pub async fn run(args: Args, client: StorageClient) -> Result<()> {
             client
                 .create_directory(&mkdir_args.path, mkdir_args.parents)
                 .await?;
+        }
+        Commands::Cat(cat_args) => {
+            client.cat_file(&cat_args.file).await?;
         }
     }
     Ok(())

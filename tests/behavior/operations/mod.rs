@@ -1,4 +1,5 @@
 pub mod copy;
+pub mod cat;
 pub mod delete;
 pub mod download;
 pub mod list;
