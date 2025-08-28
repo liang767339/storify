@@ -1,9 +1,9 @@
 use crate::error::{Error, Result};
 use crate::storage::constants::CAT_CONFIRM_SIZE_THRESHOLD;
 use opendal::Operator;
+use std::io::IsTerminal;
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::io::IsTerminal;
 
 pub trait FileReader {
     async fn read_and_display(&self, path: &str) -> Result<()>;
@@ -32,7 +32,7 @@ impl OpenDalFileReader {
                 }
             }
         };
-        
+
         let content_length = metadata.content_length();
         if content_length > CAT_CONFIRM_SIZE_THRESHOLD {
             Ok(self.prompt_large_file_confirmation(content_length).await?)
@@ -54,7 +54,7 @@ impl OpenDalFileReader {
             "File is large ({} MB). Do you want to display it? (y/N)",
             file_size / (1024 * 1024)
         );
-        
+
         let mut input = String::new();
         io::stdin()
             .read_line(&mut input)
@@ -62,7 +62,7 @@ impl OpenDalFileReader {
                 path: "stdin".to_string(),
                 source: Box::new(e.into()),
             })?;
-        
+
         match input.trim().to_lowercase().as_str() {
             "y" | "yes" => Ok(true),
             _ => {
