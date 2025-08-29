@@ -17,6 +17,6 @@ async fn test_cat_small_file(_client: StorageClient) -> Result<()> {
         .arg(&path)
         .assert()
         .success()
-        .stderr(predicate::str::contains("File not found"));
+        .stdout(predicate::str::contains(content));
     Ok(())
 }
