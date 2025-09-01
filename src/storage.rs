@@ -16,7 +16,7 @@ use self::operations::mkdir::OpenDalMkdirer;
 use self::operations::upload::OpenDalUploader;
 use self::operations::usage::OpenDalUsageCalculator;
 use self::operations::{
-    Copier, Deleter, Downloader, FileReader, Lister, Mkdirer,Stater, Uploader, UsageCalculator
+    Copier, Deleter, Downloader, FileReader, Lister, Mkdirer, Stater, Uploader, UsageCalculator,
 };
 use crate::wrap_err;
 
