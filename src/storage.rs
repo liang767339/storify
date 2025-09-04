@@ -24,6 +24,7 @@ use crate::wrap_err;
 pub enum StorageProvider {
     Oss,
     S3,
+    Cos,
     Fs,
     Hdfs,
 }
@@ -35,6 +36,7 @@ impl FromStr for StorageProvider {
         match s.to_lowercase().as_str() {
             "oss" => Ok(Self::Oss),
             "s3" | "minio" => Ok(Self::S3),
+            "cos" => Ok(Self::Cos),
             "fs" => Ok(Self::Fs),
             "hdfs" => Ok(Self::Hdfs),
             _ => Err(Error::UnsupportedProvider {
@@ -87,6 +89,24 @@ impl StorageConfig {
             bucket,
             access_key_id: Some(access_key_id),
             access_key_secret: Some(secret_access_key),
+            endpoint: None,
+            region,
+            root_path: None,
+            name_node: None,
+        }
+    }
+
+    pub fn cos(
+        bucket: String,
+        secret_id: String,
+        secret_key: String,
+        region: Option<String>,
+    ) -> Self {
+        Self {
+            provider: StorageProvider::Cos,
+            bucket,
+            access_key_id: Some(secret_id),
+            access_key_secret: Some(secret_key),
             endpoint: None,
             region,
             root_path: None,
@@ -174,6 +194,31 @@ impl StorageClient {
                 if let Some(endpoint) = &config.endpoint {
                     builder = builder.endpoint(endpoint);
                 }
+                Ok(Operator::new(builder)?.finish())
+            }
+            StorageProvider::Cos => {
+                let mut builder = opendal::services::Cos::default().bucket(&config.bucket);
+
+                if let Some(access_key_id) = &config.access_key_id {
+                    builder = builder.secret_id(access_key_id);
+                }
+                if let Some(secret_access_key) = &config.access_key_secret {
+                    builder = builder.secret_key(secret_access_key);
+                }
+                if let Some(endpoint) = &config.endpoint {
+                    builder = builder.endpoint(endpoint);
+                } else {
+                    builder = builder.endpoint("https://cos.myqcloud.com");
+                }
+
+                log::debug!(
+                    "COS builder config: bucket={}, endpoint={:?}, access_key_id={:?}, access_key_secret={:?}",
+                    config.bucket,
+                    config.endpoint,
+                    config.access_key_id,
+                    config.access_key_secret
+                );
+
                 Ok(Operator::new(builder)?.finish())
             }
             StorageProvider::Fs => {
