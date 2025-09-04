@@ -10,7 +10,7 @@ pub mod upload;
 pub mod usage;
 
 // Re-export all operation traits - all are now implemented
-pub use cat::FileReader;
+pub use cat::Cater;
 pub use copy::Copier;
 pub use delete::Deleter;
 pub use download::Downloader;

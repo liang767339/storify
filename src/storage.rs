@@ -16,7 +16,7 @@ use self::operations::mkdir::OpenDalMkdirer;
 use self::operations::upload::OpenDalUploader;
 use self::operations::usage::OpenDalUsageCalculator;
 use self::operations::{
-    Copier, Deleter, Downloader, FileReader, Lister, Mkdirer, Stater, Uploader, UsageCalculator,
+    Cater, Copier, Deleter, Downloader, Lister, Mkdirer, Stater, Uploader, UsageCalculator,
 };
 use crate::wrap_err;
 
@@ -327,11 +327,17 @@ impl StorageClient {
         )
     }
 
-    pub async fn cat_file(&self, path: &str) -> Result<()> {
-        log::debug!("cat_file provider={:?} path={}", self.provider, path);
+    pub async fn cat_file(&self, path: &str, force: bool, size_limit_mb: u64) -> Result<()> {
+        log::debug!(
+            "cat_file provider={:?} path={},force={},size_limit_mb={}",
+            self.provider,
+            path,
+            force,
+            size_limit_mb
+        );
         let reader = OpenDalFileReader::new(self.operator.clone());
         wrap_err!(
-            reader.read_and_display(path).await,
+            reader.cat(path, force, size_limit_mb).await,
             CatFailed {
                 path: path.to_string()
             }
