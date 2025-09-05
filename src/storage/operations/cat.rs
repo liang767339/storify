@@ -58,7 +58,7 @@ impl OpenDalFileReader {
         // Check size limit
         if size_limit_mb > 0 {
             let size = metadata.content_length();
-            let file_size_mb = (size + (1024 * 1024 - 1)) / (1024 * 1024); // ceil to MB
+            let file_size_mb = size.div_ceil(1024 * 1024);
             if file_size_mb > size_limit_mb
                 && !force
                 && !self.confirm_large_file(file_size_mb, size_limit_mb).await?
