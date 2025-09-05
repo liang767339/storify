@@ -7,6 +7,7 @@ mod operations;
 mod utils;
 pub use self::utils::OutputFormat;
 
+use self::operations::cat::OpenDalFileReader;
 use self::operations::copy::OpenDalCopier;
 use self::operations::delete::OpenDalDeleter;
 use self::operations::download::OpenDalDownloader;
@@ -15,7 +16,7 @@ use self::operations::mkdir::OpenDalMkdirer;
 use self::operations::upload::OpenDalUploader;
 use self::operations::usage::OpenDalUsageCalculator;
 use self::operations::{
-    Copier, Deleter, Downloader, Lister, Mkdirer, Stater, Uploader, UsageCalculator,
+    Cater, Copier, Deleter, Downloader, Lister, Mkdirer, Stater, Uploader, UsageCalculator,
 };
 use crate::wrap_err;
 
@@ -366,6 +367,23 @@ impl StorageClient {
         wrap_err!(
             mkdirer.mkdir(path, parents).await,
             DirectoryCreationFailed {
+                path: path.to_string()
+            }
+        )
+    }
+
+    pub async fn cat_file(&self, path: &str, force: bool, size_limit_mb: u64) -> Result<()> {
+        log::debug!(
+            "cat_file provider={:?} path={},force={},size_limit_mb={}",
+            self.provider,
+            path,
+            force,
+            size_limit_mb
+        );
+        let reader = OpenDalFileReader::new(self.operator.clone());
+        wrap_err!(
+            reader.cat(path, force, size_limit_mb).await,
+            CatFailed {
                 path: path.to_string()
             }
         )
