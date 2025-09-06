@@ -83,6 +83,10 @@ storify put local/dir remote/dir -R # recursive
 # Copy within storage
 storify cp source/path dest/path
 
+# Mv within storage
+storify mv source/path dest/path
+storify mv path/src_file  path/dest_file
+
 # Display file contents
 storify cat path/to/file
 
@@ -108,6 +112,7 @@ storify stat path/to/file --json    # JSON output
 | `get` | Download files from remote | |
 | `put` | Upload files to remote | `-R` (recursive) |
 | `cp` | Copy files within storage | |
+| `mv` | Rename files, or move files | |
 | `cat` | Display file contents | |
 | `rm` | Delete files/directories | `-R` (recursive), `-f` (force) |
 | `du` | Show disk usage | `-s` (summary only) |
